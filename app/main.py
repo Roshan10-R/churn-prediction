@@ -18,23 +18,19 @@ from app.schemas import CustomerData, PredictionResponse
 from src.config import MODEL_PATH
 
 _model = None
+_model_error = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _model
+    global _model, _model_error
 
     try:
-        print(f"Loading model from: {MODEL_PATH}")
         _model = joblib.load(MODEL_PATH)
-        print("✅ Model loaded successfully")
-
-    except Exception:
-        import traceback
-
-        print("❌ Failed to load model")
-        traceback.print_exc()
+        _model_error = None
+    except Exception as e:
         _model = None
+        _model_error = repr(e)
 
     yield
 
@@ -46,10 +42,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_loaded": _model is not None}
+    return {
+        "status": "ok",
+        "model_loaded": _model is not None,
+        "model_error": _model_error,
+    }
 
 
 @app.post("/predict", response_model=PredictionResponse)
