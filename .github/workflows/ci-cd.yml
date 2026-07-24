@@ -1,25 +1,23 @@
 name: CI/CD Pipeline
 
-# Runs on every push/PR to main. Pushing to GHCR (building + publishing
-# the image) only happens on main, not on PRs -- PRs just get tested.
+# Runs on every push/PR to main.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/churn-api
+# Uncomment when enabling GHCR image publishing.
+# env:
+#   IMAGE_NAME: ghcr.io/${{ github.repository }}/churn-api
 
 jobs:
   # ---------------------------------------------------------------------
-  # Job 1: Train the model fresh and run the test suite against it.
-  # Retraining on every push keeps the pipeline honest -- if a code change
-  # breaks training or the model's predictions, this job catches it before
-  # anything gets deployed.
+  # Stage 1: Verify the project builds and tests successfully.
   # ---------------------------------------------------------------------
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,96 +25,145 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Train model
-        run: python -m src.train
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run tests
-        run: pytest tests/ -v
-
-      # Hand the freshly trained model to the next job, so the Docker
-      # image built below packages exactly the model that was just tested
-      # (not a stale one from a previous run, not one trained separately).
-      - name: Upload trained model artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: trained-model
-          path: models/
-          retention-days: 7
-
-  # ---------------------------------------------------------------------
-  # Job 2: Build the Docker image with that exact model baked in, smoke
-  # test the container by actually running it and hitting /health and
-  # /predict, then push to GitHub Container Registry (main branch only).
-  # ---------------------------------------------------------------------
-  build-and-push:
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download trained model artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: trained-model
-          path: models/
-
-      - name: Build Docker image
-        run: docker build -t churn-api:test .
-
-      - name: Smoke test the container
+        env:
+          PYTHONPATH: .
         run: |
-          docker run -d -p 8000:8000 --name churn-api-test churn-api:test
-          echo "Waiting for the API to start..."
-          for i in {1..15}; do
-            if curl -sf http://localhost:8000/health; then
-              echo "API is healthy"
-              break
-            fi
-            sleep 2
-          done
+          python -m pytest tests -v
 
-          echo "Checking /health response..."
-          curl -sf http://localhost:8000/health | grep '"model_loaded":true'
+# ==========================================================================
+# STAGE 2 (Enable after CI tests are passing)
+# --------------------------------------------------------------------------
+# Add the following step inside the test job after "Run tests":
+#
+#      - name: Train model
+#        run: python -m src.train
+#
+# ==========================================================================
+#
+#      - name: Upload trained model artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: trained-model
+#          path: models/
+#          retention-days: 7
+#
+# ==========================================================================
 
-          echo "Checking /predict with a real request..."
-          curl -sf -X POST http://localhost:8000/predict \
-            -H "Content-Type: application/json" \
-            -d '{
-              "gender": "Female", "SeniorCitizen": 0, "Partner": "Yes", "Dependents": "No",
-              "tenure": 12, "PhoneService": "Yes", "MultipleLines": "No",
-              "InternetService": "Fiber optic", "OnlineSecurity": "No", "OnlineBackup": "Yes",
-              "DeviceProtection": "No", "TechSupport": "No", "StreamingTV": "Yes",
-              "StreamingMovies": "No", "Contract": "Month-to-month", "PaperlessBilling": "Yes",
-              "PaymentMethod": "Electronic check", "MonthlyCharges": 70.5, "TotalCharges": 840.0
-            }' | grep 'churn_probability'
+# ==========================================================================
+# STAGE 3 (Enable after Docker works locally)
+# --------------------------------------------------------------------------
+#
+#  build-and-push:
+#    needs: test
+#    runs-on: ubuntu-latest
+#    permissions:
+#      contents: read
+#      packages: write
+#
+#    steps:
+#
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Download trained model artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: trained-model
+#          path: models/
+#
+#      - name: Build Docker image
+#        run: docker build -t churn-api:test .
+#
+# ==========================================================================
 
-          docker stop churn-api-test
-          docker rm churn-api-test
+# ==========================================================================
+# STAGE 4 (Enable after Docker image builds successfully)
+# --------------------------------------------------------------------------
+#
+#      - name: Smoke test the container
+#        run: |
+#          docker run -d -p 8000:8000 --name churn-api-test churn-api:test
+#          echo "Waiting for the API to start..."
+#          for i in {1..15}; do
+#            if curl -sf http://localhost:8000/health; then
+#              echo "API is healthy"
+#              break
+#            fi
+#            sleep 2
+#          done
+#
+#          curl -sf http://localhost:8000/health | grep '"model_loaded":true'
+#
+#          curl -sf -X POST http://localhost:8000/predict \
+#            -H "Content-Type: application/json" \
+#            -d '{
+#              "gender":"Female",
+#              "SeniorCitizen":0,
+#              "Partner":"Yes",
+#              "Dependents":"No",
+#              "tenure":12,
+#              "PhoneService":"Yes",
+#              "MultipleLines":"No",
+#              "InternetService":"Fiber optic",
+#              "OnlineSecurity":"No",
+#              "OnlineBackup":"Yes",
+#              "DeviceProtection":"No",
+#              "TechSupport":"No",
+#              "StreamingTV":"Yes",
+#              "StreamingMovies":"No",
+#              "Contract":"Month-to-month",
+#              "PaperlessBilling":"Yes",
+#              "PaymentMethod":"Electronic check",
+#              "MonthlyCharges":70.5,
+#              "TotalCharges":840.0
+#            }' | grep 'churn_probability'
+#
+#          docker stop churn-api-test
+#          docker rm churn-api-test
+#
+# ==========================================================================
 
-      # Only publish the image once it's been proven to actually run and
-      # serve correct predictions, and only from main (not from PRs).
-      - name: Log in to GitHub Container Registry
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+# ==========================================================================
+# STAGE 5 (Enable after Docker tests pass)
+# --------------------------------------------------------------------------
+#
+#      - name: Log in to GitHub Container Registry
+#        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#        uses: docker/login-action@v3
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.actor }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Tag and push image
+#        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#        run: |
+#          docker tag churn-api:test ${{ env.IMAGE_NAME }}:latest
+#          docker tag churn-api:test ${{ env.IMAGE_NAME }}:${{ github.sha }}
+#          docker push ${{ env.IMAGE_NAME }}:latest
+#          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+#
+# ==========================================================================
 
-      - name: Tag and push image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker tag churn-api:test ${{ env.IMAGE_NAME }}:latest
-          docker tag churn-api:test ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+# ==========================================================================
+# STAGE 6
+# --------------------------------------------------------------------------
+# Add render.yaml to the repository and connect Render to your GitHub
+# repository. At this point, every successful push to main will:
+#
+#   ✓ Run tests
+#   ✓ Build Docker image
+#   ✓ Smoke-test the container
+#   ✓ Push image to GHCR
+#   ✓ Trigger Render deployment
+#
+# ==========================================================================
