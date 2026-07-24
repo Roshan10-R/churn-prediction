@@ -55,7 +55,13 @@ jobs:
           PYTHONPATH: .
         run: |
           python -m pytest tests -v -s
+      # ---------------------- DOCKER BUILD ----------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
+      - name: Build Docker image
+        run: |
+          docker build -t churn-api:latest .
 # ==========================================================================
 # STAGE 2 (Enable after CI tests are passing)
 # --------------------------------------------------------------------------
