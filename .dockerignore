@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+notebooks/
+data/
+mlruns/
+mlflow.db
+.venv
+venv
+*.ipynb
