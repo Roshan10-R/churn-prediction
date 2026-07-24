@@ -22,16 +22,21 @@ _model = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: load the model once into memory
     global _model
+
     try:
+        print(f"Loading model from: {MODEL_PATH}")
         _model = joblib.load(MODEL_PATH)
-    except FileNotFoundError:
-        # Don't crash the app at import time (useful for running tests
-        # before training has happened); requests will fail clearly instead.
+        print("✅ Model loaded successfully")
+
+    except Exception:
+        import traceback
+
+        print("❌ Failed to load model")
+        traceback.print_exc()
         _model = None
+
     yield
-    # Shutdown: nothing to clean up here
 
 
 app = FastAPI(
