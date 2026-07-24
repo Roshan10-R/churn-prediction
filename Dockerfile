@@ -1,14 +1,12 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /code
 
-# Install dependencies first (better layer caching -- only re-runs
-# pip install when requirements.txt actually changes)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only what the running API needs: the app, the src package
-# (schemas import from src.config), and the trained model artifact.
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
 COPY ./app ./app
 COPY ./src ./src
 COPY ./models ./models

@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  churn-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: churn-api
+
+    ports:
+      - "8000:8000"
+
+    restart: unless-stopped
+
+    environment:
+      PYTHONUNBUFFERED: "1"
