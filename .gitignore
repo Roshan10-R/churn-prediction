@@ -11,6 +11,3 @@ mlflow.db
 .env
 
 .DS_Store
-
-models/*.pkl
-models/*.joblib
