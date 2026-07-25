@@ -11,3 +11,6 @@ mlflow.db
 .env
 
 .DS_Store
+
+monitoring/logs/*
+!monitoring/logs/.gitkeep

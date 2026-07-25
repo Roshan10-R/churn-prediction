@@ -4,7 +4,8 @@ Run with: pytest tests/ -v
 (Requires models/best_model.pkl to exist -- run `python -m src.train` first
 for the /predict tests to return real predictions rather than a 503.)
 """
-
+import os
+import csv
 import pytest
 from fastapi.testclient import TestClient
 
@@ -82,3 +83,26 @@ def test_predict_negative_tenure_rejected(client):
     payload["tenure"] = -5
     response = client.post("/predict", json=payload)
     assert response.status_code == 422
+
+def test_prediction_logging(client):
+    log_file = "monitoring/logs/prediction_log.csv"
+
+    # Count rows before prediction
+    rows_before = 0
+    if os.path.exists(log_file):
+        with open(log_file, "r", newline="", encoding="utf-8") as f:
+            rows_before = sum(1 for _ in csv.reader(f))
+
+    # Make prediction
+    response = client.post("/predict", json=VALID_PAYLOAD)
+    assert response.status_code == 200
+
+    # Log file should exist
+    assert os.path.exists(log_file)
+
+    # Count rows after prediction
+    with open(log_file, "r", newline="", encoding="utf-8") as f:
+        rows_after = sum(1 for _ in csv.reader(f))
+
+    # One new row should be added
+    assert rows_after == rows_before + 1
