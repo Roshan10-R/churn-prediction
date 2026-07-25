@@ -48,29 +48,6 @@ churn is imbalanced (~27% positive class) — a model that always predicts
 ## Project structure
 
 ```
-telco-churn-mlops/
-├── app/
-│   ├── main.py          FastAPI app (/health, /predict)
-│   └── schemas.py        Pydantic request/response models
-├── src/
-│   ├── config.py          Paths, feature lists, constants
-│   ├── preprocess.py      Data cleaning + ColumnTransformer builder
-│   ├── train.py           Trains all 3 models, logs to MLflow, saves best
-│   └── utils.py           Evaluation metrics + comparison table
-├── tests/
-│   └── test_api.py        API tests (health, valid/invalid predictions)
-├── notebooks/
-│   └── EDA.ipynb           Original exploratory analysis
-├── data/
-│   └── WA_Fn-UseC_-Telco-Customer-Churn.csv
-├── models/
-│   ├── best_model.pkl      Saved pipeline (included, pre-trained)
-│   └── metrics.json        Metrics for the saved best model
-├── requirements.txt
-├── Dockerfile
-├── .dockerignore
-└── .gitignore
-```
 
 
 
