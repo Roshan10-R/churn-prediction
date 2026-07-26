@@ -1,0 +1,9 @@
+{
+    "reference_rows": 5634,
+    "current_rows": 11,
+    "drifted_columns": 18,
+    "total_columns": 20,
+    "drift_share": 0.9474,
+    "drift_detected": true,
+    "model_health": "Retraining Recommended"
+}
