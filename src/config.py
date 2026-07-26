@@ -13,6 +13,8 @@ MODEL_PATH = os.path.join(BASE_DIR, "models", "best_model.pkl")
 METRICS_PATH = os.path.join(BASE_DIR, "models", "metrics.json")
 
 # --- MLflow ---
+
+MODEL_NAME = "telco-churn-model"
 MLFLOW_EXPERIMENT_NAME = "Telco Churn"
 MLFLOW_TRACKING_URI = "sqlite:///" + os.path.join(BASE_DIR, "mlflow.db")
 

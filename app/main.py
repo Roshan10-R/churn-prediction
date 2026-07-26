@@ -10,7 +10,8 @@ validated request body to the pipeline.
 
 from contextlib import asynccontextmanager
 import time
-
+import mlflow
+import mlflow.sklearn
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -18,7 +19,7 @@ from fastapi import FastAPI, HTTPException
 from app.schemas import CustomerData, PredictionResponse
 from monitoring.logger import initialize_log, log_prediction
 from src.config import MODEL_PATH
-
+from src.config import MLFLOW_TRACKING_URI
 
 _model = None
 _model_error = None
@@ -29,7 +30,8 @@ async def lifespan(app: FastAPI):
     global _model, _model_error
 
     try:
-        _model = joblib.load(MODEL_PATH)
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        _model = mlflow.sklearn.load_model("models:/telco-churn-model@production")
         _model_error = None
         initialize_log()
     except Exception as e:
