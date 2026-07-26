@@ -26,6 +26,7 @@ from xgboost import XGBClassifier
 from pathlib import Path
 from mlflow import MlflowClient
 from src.config import MODEL_NAME
+from mlflow.exceptions import MlflowException
 
 from src.config import (
     MLFLOW_EXPERIMENT_NAME,
@@ -162,7 +163,14 @@ def train_best_model():
     client = MlflowClient()
 
     client = MlflowClient()
+    MODEL_NAME = "telco-churn-model"
 
+    try:
+        client.get_registered_model(MODEL_NAME)
+        print("Registered model already exists.")
+    except Exception:
+        print("Creating registered model...")
+        client.create_registered_model(MODEL_NAME)
     registered_model = client.create_model_version(
     name=MODEL_NAME,
     source=best_result["model_uri"],
@@ -200,15 +208,20 @@ def train_best_model():
     
 def main():
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
-    
     result = train_best_model()
+
     print(
         f"\nTraining complete!"
         f"\nBest model: {result['best_name']}"
         f"\nVersion: {result['registered_version']}"
     )
+  
+
+    
+   
 
 if __name__ == "__main__":
     main()
