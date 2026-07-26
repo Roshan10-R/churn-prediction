@@ -10,6 +10,7 @@ RUN pip install --upgrade pip && \
 COPY ./app ./app
 COPY ./src ./src
 COPY ./models ./models
+COPY ./monitoring ./monitoring
 
 EXPOSE 8000
 
