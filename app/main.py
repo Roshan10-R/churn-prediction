@@ -15,7 +15,7 @@ import mlflow.sklearn
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-
+from pathlib import Path
 from app.schemas import CustomerData, PredictionResponse
 from monitoring.logger import initialize_log, log_prediction
 from src.config import MODEL_PATH
@@ -31,9 +31,27 @@ async def lifespan(app: FastAPI):
 
     try:
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-        _model = mlflow.sklearn.load_model("models:/telco-churn-model@production")
+        mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
+
+        try:
+            print("Loading model from MLflow Registry...")
+            _model = mlflow.sklearn.load_model(
+                "models:/telco-churn-model@production"
+            )
+            print("Loaded model from MLflow Registry.")
+
+        except Exception:
+            print("Registry unavailable. Trying local model...")
+
+            if Path(MODEL_PATH).exists():
+                _model = joblib.load(MODEL_PATH)
+                print("Loaded local model.")
+            else:
+                raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
+
         _model_error = None
         initialize_log()
+
     except Exception as e:
         _model = None
         _model_error = repr(e)
